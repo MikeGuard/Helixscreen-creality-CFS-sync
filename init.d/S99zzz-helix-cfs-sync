@@ -1,0 +1,28 @@
+#!/bin/sh
+# HelixScreen -> Creality CFS slot sync (https://github.com/MikeGuard/Helixscreen-creality-CFS-sync)
+PY=/usr/data/moonraker/moonraker-env/bin/python
+APP=/usr/data/helix-cfs-sync/helix_cfs_sync.py
+PIDF=/tmp/helix_cfs_sync.pid
+
+running() { [ -f $PIDF ] && kill -0 "$(cat $PIDF)" 2>/dev/null; }
+
+case "$1" in
+  start)
+    running && exit 0
+    # wait for HelixScreen and the Creality services to come up first
+    ( sleep ${DELAY:-30}; $PY $APP >/dev/null 2>&1 & echo $! > $PIDF ) &
+    ;;
+  stop)
+    running && kill "$(cat $PIDF)"
+    rm -f $PIDF
+    ;;
+  restart)
+    $0 stop; sleep 1; DELAY=0 $0 start
+    ;;
+  status)
+    if running; then echo "helix_cfs_sync running (pid $(cat $PIDF))"; else echo "helix_cfs_sync not running"; fi
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|status}"
+    ;;
+esac

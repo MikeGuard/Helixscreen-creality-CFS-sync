@@ -1,0 +1,22 @@
+#!/bin/sh
+# Starts Creality's backend services alongside HelixScreen (https://github.com/MikeGuard/Helixscreen-creality-CFS-sync)
+# HelixScreen disables S99start_app, which also stops these. They are what Creality Print,
+# the Creality app/cloud and the :9999 websocket (used by helix_cfs_sync) depend on.
+# display-server and Monitor are deliberately NOT started: they fight HelixScreen for the screen.
+SVCS="log_main audio-server upgrade-server master-server app-server web-server wifi-server"
+
+start_services() {
+    sleep 15   # let HelixScreen and Wi-Fi come up first
+    for svc in $SVCS; do
+        pidof "$svc" >/dev/null || /usr/bin/"$svc" >/dev/null 2>&1 &
+        sleep 3   # stagger starts; starting all at once briefly stalls Moonraker
+    done
+}
+
+case "$1" in
+    start)   start_services & ;;
+    stop)    killall $SVCS 2>/dev/null ;;
+    restart) $0 stop; sleep 2; $0 start ;;
+    status)  for s in $SVCS; do pidof "$s" >/dev/null && echo "$s: running" || echo "$s: stopped"; done ;;
+    *)       echo "Usage: $0 {start|stop|restart|status}" ;;
+esac
